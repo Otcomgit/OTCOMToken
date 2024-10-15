@@ -8,6 +8,7 @@
         ╚██████╔╝   ██║   ╚██████╔╝██║ ╚═╝ ██║       ██║   ╚██████╔╝██║  ██╗███████╗██║ ╚████║
          ╚═════╝    ╚═╝    ╚═════╝ ╚═╝     ╚═╝       ╚═╝    ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═══╝
 */
+
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
  
@@ -282,7 +283,7 @@ contract OTOMToken is Ownable , IERC20 {
     uint256 public  liquidityTaxPercentage = 1000; //1000=1%
     uint256 public  devTaxPercentage=1000; // 1000 = 1%
     uint256 public  taxThreshold = 10000 * 10**uint256(_decimals); // Threshold for performing swapandliquify
-    uint256 public  maxAmount = 500000 * 10 ** uint256(_decimals); // Max Buy/Sell Limit
+    uint256 public  maxAmount = 20000 * 10 ** uint256(_decimals); // Max Buy/Sell Limit
     uint256 public numBlocksForBlacklist = 5;  
 
     uint256 private liquidityTaxShare =50000;    
@@ -317,7 +318,8 @@ contract OTOMToken is Ownable , IERC20 {
         _balances[msg.sender] = _totalSupply;
  
         IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(
-            0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D // Etherum mainnet
+            // 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D // Etherum mainnet
+            0xD99D1c33F9fC3444f8101754aBC46c52416550D1
         );
         uniswapV2Router = _uniswapV2Router;
         uniswapPair = IUniswapV2Factory(_uniswapV2Router.factory()).createPair(
@@ -558,7 +560,7 @@ contract OTOMToken is Ownable , IERC20 {
     function isTradeEnabled() external view returns (bool) {
         return trade_open;
     }
-    
+  
     /**
     * @dev Sets the number of blocks during which sniper bot protection is active. 
     * Only callable by the contract owner.
@@ -576,11 +578,11 @@ contract OTOMToken is Ownable , IERC20 {
     * @dev Sets the maximum transaction amount. Can only be called by the contract owner.
     * 
     * @param amount The new maximum amount allowed per transaction.
-    * Requires that the amount does not exceed 5% of the total supply (500,000 tokens).
+    * Requires that the amount does not exceed (50,000tokens).
     * Emits an {UpdatedMaxAmount} event indicating the new maximum amount.
     */
     function setMaxAmount(uint256 amount) external onlyOwner {
-        require(amount <= 500000,"max amount cannot exceed 5% of totalsupply");
+        require(amount <= 50000 * 10 ** 18, "Amount exceeds the maximum limit of 50,000 tokens");
         maxAmount = amount;
         emit UpdatedMaxAmount(maxAmount);
     }
