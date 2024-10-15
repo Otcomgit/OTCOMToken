@@ -1,11 +1,12 @@
-/**
 
-                     ██████╗ ████████╗ ██████╗ ██████╗ ███╗   ███╗
-                    ██╔═══██╗╚══██╔══╝██╔════╝██╔═══██╗████╗ ████║
-                    ██║   ██║   ██║   ██║     ██║   ██║██╔████╔██║
-                    ██║   ██║   ██║   ██║     ██║   ██║██║╚██╔╝██║
-                    ╚██████╔╝   ██║   ╚██████╗╚██████╔╝██║ ╚═╝ ██║
-                     ╚═════╝    ╚═╝    ╚═════╝ ╚═════╝ ╚═╝     ╚═╝
+/*
+                           
+         ██████╗ ████████╗ ██████╗ ███╗   ███╗    ████████╗ ██████╗ ██╗  ██╗███████╗███╗   ██╗
+        ██╔═══██╗╚══██╔══╝██╔═══██╗████╗ ████║    ╚══██╔══╝██╔═══██╗██║ ██╔╝██╔════╝████╗  ██║
+        ██║   ██║   ██║   ██║   ██║██╔████╔██║       ██║   ██║   ██║█████╔╝ █████╗  ██╔██╗ ██║
+        ██║   ██║   ██║   ██║   ██║██║╚██╔╝██║       ██║   ██║   ██║██╔═██╗ ██╔══╝  ██║╚██╗██║
+        ╚██████╔╝   ██║   ╚██████╔╝██║ ╚═╝ ██║       ██║   ╚██████╔╝██║  ██╗███████╗██║ ╚████║
+         ╚═════╝    ╚═╝    ╚═════╝ ╚═╝     ╚═╝       ╚═╝    ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═══╝
 */
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
@@ -264,41 +265,48 @@ interface IUniswapV2Router02 is IRouter01 {
     ) external returns (uint[] memory amounts);
 }
 
-contract OTCOMToken is Ownable ,IERC20 {
+contract OTOMToken is Ownable , IERC20 {
  
-    string private constant _name = "OTCOM";
-    string private constant _symbol = "otcm";
-    uint8 private constant _decimals = 18;
+    string private constant _name = "Otcom";
+    string private constant _symbol = "OTOM";
+    uint8  private constant _decimals = 18;
     uint256 private _totalSupply = 10 * 10**6 *10**uint256(_decimals);
  
     mapping(address => uint256) internal _balances;
     mapping(address => mapping(address => uint256)) private _allowances;
+    mapping(address => bool) public blacklisted;
    
     address public devWallet;
+    address constant public DEAD = 0x000000000000000000000000000000000000dEaD;
    
     uint256 public  liquidityTaxPercentage = 1000; //1000=1%
     uint256 public  devTaxPercentage=1000; // 1000 = 1%
+    uint256 public  taxThreshold = 10000 * 10**uint256(_decimals); // Threshold for performing swapandliquify
+    uint256 public  maxAmount = 500000 * 10 ** uint256(_decimals); // Max Buy/Sell Limit
+    uint256 public numBlocksForBlacklist = 5;  
 
-    uint256 private  liquidityTaxShare =50000;    
-    uint256 private  devTaxShare = 67000;      
-    uint256 public   taxThreshold = 10000 * 10**uint256(_decimals); // Threshold for performing swapandliquify
- 
+    uint256 private liquidityTaxShare =50000;    
+    uint256 private devTaxShare = 67000;      
+    uint256 private currentBlockNumber;
+
     IUniswapV2Router02 public immutable uniswapV2Router;
     address public immutable uniswapPair;
- 
+
     bool private swapping;
-    bool public swapEnabled = true;
+    bool private trade_open;
  
-    //events  
+    //-------------events------------------ 
     event UpdatedDevWallet(address updatedDevWallet);
     event UpdatedTaxPercentage(uint256 updatedLiquidityTax,uint256 updatedDevTax);
     event UpatedTaxThreshold(uint256 updateTaxThreshold);
+    event UpdatedMaxAmount(uint256 updatedMaxAmount);
+    event UpdatedBlock(uint256 updatedBlocks); 
     event Burn(address indexed burner, uint256 amount);
-
+    
     /**
     * @dev Constructor function that initializes the token contract.
     * - Assigns the total supply to the contract deployer (msg.sender).
-    * - Sets up the UniswapV2 router on BSC Testnet and creates a liquidity pair between this token and WETH.
+    * - Sets up the UniswapV2 router on Etherum mainnet and creates a liquidity pair between this token and WETH.
     * - Approves the maximum possible allowance for both the sender and the contract to interact with the UniswapV2 router.
     * - Initializes the dev wallet.
     * - Emits a Transfer event indicating that tokens have been transferred from the zero address to the deployer.
@@ -309,8 +317,8 @@ contract OTCOMToken is Ownable ,IERC20 {
         _balances[msg.sender] = _totalSupply;
  
         IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(
-            0xD99D1c33F9fC3444f8101754aBC46c52416550D1 //  here you can set router according your network
-         );
+            0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D // Etherum mainnet
+        );
         uniswapV2Router = _uniswapV2Router;
         uniswapPair = IUniswapV2Factory(_uniswapV2Router.factory()).createPair(
             address(this),
@@ -343,7 +351,7 @@ contract OTCOMToken is Ownable ,IERC20 {
     function symbol() public view virtual  returns (string memory) {
         return _symbol;
     }
- 
+     
     /**
     * @notice Retrieves the number of decimal places used in the token representation.
     * @dev This function returns the number of decimal places used to represent the token balances.
@@ -383,24 +391,29 @@ contract OTCOMToken is Ownable ,IERC20 {
     }
 
     /**
-    * @dev Internal function that burns a specified amount of tokens from a specified account.
-    * @param account The address of the account whose tokens are being burned.
-    * @param amount The amount of tokens to be burned.
+    * @dev Burns a specified amount of tokens from an account by transferring them to the dead address.
+    * This does not decrease the total supply. Requirements: 
+    * - `account` cannot be the zero address.
+    * - `amount` must not exceed the balance of `account`.
+    * Emits a {Transfer} event for the dead address and a {Burn} event.
+    *
+    * @param account The address from which to burn tokens.
+    * @param amount The number of tokens to burn.
     */
     function _burn(address account, uint256 amount) internal {
-        require(account != address(0), "ERC20: burn from the zero address");
-
-        uint256 accountBalance = _balances[account];
-        require(accountBalance >= amount, "ERC20: burn amount exceeds balance");
-        unchecked {
-            _balances[account] = accountBalance - amount;
-            _totalSupply -= amount;
-        }
-
-        emit Transfer(account, address(0), amount);
-        emit Burn(account, amount);
+       require(account != address(0), "ERC20: burn from the zero address");
+   
+       uint256 accountBalance = _balances[account];
+       require(accountBalance >= amount, "ERC20: burn amount exceeds balance");
+       unchecked {
+           _balances[account] = accountBalance - amount;
+           _balances[DEAD] += amount;
+       }
+   
+       emit Transfer(account, DEAD, amount);
+       emit Burn(account, amount);
     }
- 
+
     /**
     * @notice Transfers tokens from the sender's account to the specified recipient.
     * @dev This function is used to transfer tokens from the sender's account to the specified recipient.
@@ -527,6 +540,50 @@ contract OTCOMToken is Ownable ,IERC20 {
  
         emit Transfer(from, to, amount);
     }
+    
+    /**
+    * @dev Enables or disables trading. Can only be called by the contract owner.
+    * 
+    * @param _enable A boolean value where `true` enables trading and `false` disables it.
+    */
+    function enableTrade(bool _enable) public onlyOwner {
+        trade_open = _enable; 
+    }
+ 
+    /**
+    * @dev Returns the current trading status.
+    * 
+    * @return A boolean value where `true` indicates trading is enabled and `false` indicates it is disabled.
+    */
+    function isTradeEnabled() external view returns (bool) {
+        return trade_open;
+    }
+    
+    /**
+    * @dev Sets the number of blocks during which sniper bot protection is active. 
+    * Only callable by the contract owner.
+    * 
+    * @param numBlocks The number of blocks for which addresses will be blacklisted after liquidity is added.
+    * Emits an {UpdatedBlock} event indicating the new block count.
+    */
+    function setNumberOfBlocksForBlacklist(uint256 numBlocks) external onlyOwner {
+        require(numBlocks > 0,"number of block should be more than 0");
+        numBlocksForBlacklist = numBlocks;
+        emit UpdatedBlock(numBlocksForBlacklist);
+    }
+ 
+    /**
+    * @dev Sets the maximum transaction amount. Can only be called by the contract owner.
+    * 
+    * @param amount The new maximum amount allowed per transaction.
+    * Requires that the amount does not exceed 5% of the total supply (500,000 tokens).
+    * Emits an {UpdatedMaxAmount} event indicating the new maximum amount.
+    */
+    function setMaxAmount(uint256 amount) external onlyOwner {
+        require(amount <= 500000,"max amount cannot exceed 5% of totalsupply");
+        maxAmount = amount;
+        emit UpdatedMaxAmount(maxAmount);
+    }
    
     /**
     * @dev Sets a new development wallet address.
@@ -568,15 +625,6 @@ contract OTCOMToken is Ownable ,IERC20 {
         require(_threshold > 0 , "Amount should be more than zero");
         taxThreshold = _threshold;
         emit UpatedTaxThreshold(taxThreshold);
-    }
-
-    /**
-    * @dev Allows the contract owner to recover all ETH from the contract.
-    * - Only callable by the contract owner.
-    * - Transfers the entire ETH balance held by the contract to the owner's address.
-    */
-    function recoverETHfromContract() external onlyOwner {
-        payable(msg.sender).transfer(address(this).balance);
     }
     
     /**
@@ -663,21 +711,41 @@ contract OTCOMToken is Ownable ,IERC20 {
     }
 
     /**
-    * @notice Handles the internal token transfer logic, including tax deductions for buy/sell operations.
-    * @dev Applies liquidity and development taxes on buy/sell transactions involving the Uniswap pair.
-    *      Normal transfers occur without taxes if the sender or recipient is the owner or the contract itself.
-    * @param sender The address initiating the transfer.
+    * @dev Handles token transfers between addresses with additional checks and tax handling.
+    * 
+    * - Prevents transfers from/to the zero address.
+    * - Enforces that sender and recipient are not blacklisted.
+    * - Ensures trading is enabled unless the sender or recipient is the contract owner.
+    * - Automatically blacklists recipients who buy during the sniper bot protection period (early blocks after liquidity is added).
+    * - Implements buy/sell taxes for liquidity and development, and transfers these to the contract for handling.
+    * - Limits transaction amounts based on a defined max amount.
+    * 
+    * @param sender The address sending the tokens.
     * @param recipient The address receiving the tokens.
-    * @param amount The number of tokens being transferred.
+    * @param amount The number of tokens to be transferred.
     */
     function _transfer(address sender, address recipient, uint256 amount) internal {
         require(sender != address(0), "ERC20: transfer from the zero address");
         require(recipient != address(0), "ERC20: transfer to the zero address");
         require(amount > 0, "Transfer amount must be greater than zero");
+
+        require(!blacklisted[sender], "Sender is blacklisted");
+        require(!blacklisted[recipient], "Recipient is blacklisted");
  
         //If it's the owner, do a normal transfer
         if (sender == owner() || recipient == owner() || sender == address(this)) {
+            if(currentBlockNumber == 0 && recipient == uniswapPair){
+                currentBlockNumber = block.number;
+            }
             _transferTokens(sender, recipient, amount);
+            return;
+        }
+
+        //Check if trading is enabled
+        require(trade_open, "Trading is disabled");
+ 
+        if(block.number <= currentBlockNumber + numBlocksForBlacklist){
+            blacklisted[recipient] = true;
             return;
         }
  
@@ -693,7 +761,7 @@ contract OTCOMToken is Ownable ,IERC20 {
  
         if (
             canSwap &&
-            swapEnabled &&
+            sender != uniswapPair &&
             !swapping 
         ) {
             swapping = true;
@@ -702,6 +770,7 @@ contract OTCOMToken is Ownable ,IERC20 {
         }
        
         if (isBuy || isSell) {
+                require (amount <= maxAmount, "Cannot buy & sell  more than max limit");
                 liquidtiyTax = _calculateTax(amount, liquidityTaxPercentage);
                 devTax=_calculateTax(amount, devTaxPercentage);
                 totaltax= liquidtiyTax + devTax;
@@ -710,7 +779,6 @@ contract OTCOMToken is Ownable ,IERC20 {
             } 
             amount -= totaltax;
             _transferTokens(sender, recipient, amount);
- 
     }
  
     /**
