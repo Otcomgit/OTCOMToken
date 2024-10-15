@@ -96,12 +96,12 @@
 - **`setNumberOfBlocksForBlacklist(uint256 numBlocks)`**  
   Sets the number of blocks after launch for blacklist management.
   
-    # numBlocksForBlacklist(curenntly set 5 block after you can change)
+     ` numBlocksForBlacklist(curenntly set 5 block after you can change)`
     - numBlocksForBlacklist sets the number of blocks during which anyone who interacts with the contract will be blacklisted. Specifically, after the liquidity pool (Uniswap pair) is created, the contract starts counting blocks from the       current block number (currentBlockNumber). If a recipient interacts with the contract within the first numBlocksForBlacklist blocks, they are automatically blacklisted, meaning they cannot trade or transfer the token anymore.
     - Purpose: This is typically used as an anti-bot mechanism to prevent sniper bots or malicious actors from taking advantage of the token launch by buying tokens in the first few blocks after trading is enabled. By setting a block           limit, the contract can automatically blacklist such addresses, preventing them from making further trades.
 
 - **`setMaxAmount(uint256 amount)`**  
-  Sets the maximum transaction amount for buy/sell transactions.
+  The setMaxAmount function allows the contract owner to set a maximum limit for the amount of tokens that can be transferred in a single transaction. However, the new limit cannot exceed 50,000 tokens (with 18 decimal places).
 
 - **`setDevWallet(address wallet)`**  
   Updates the developer wallet address.
@@ -153,6 +153,13 @@ Addresses can be blacklisted within the first `numBlocksForBlacklist` blocks aft
 - Ensure the developer wallet is set correctly before enabling trading.
 - Use the blacklist feature to mitigate bot attacks shortly after launch.
 - Carefully manage tax percentages to maintain contract balance.
+  
+## Key steps:
+
+- Add liquidity first: Liquidity will be added before enabling trading.
+- Enable trading: Once liquidity is added, trading will be enabled.
+- Blacklist users buying within the first 5 blocks(you can change this block): After trading is enabled, for the first 5 blocks, anyone buying from the Uniswap pool will be blacklisted and permanently restricted from trading.
+
 
 ## License
 MIT License
