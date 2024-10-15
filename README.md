@@ -25,7 +25,7 @@
 - **Symbol**: OTOM
 - **Decimals**: 18
 - **Total Supply**: 10,000,000 OTOM
-- **Max Buy/Sell Limit**: 500,000 OTOM (adjustable)
+- **Max Buy/Sell Limit**: 20,000 OTOM (adjustable)
 
 ## Features
 - **Liquidity Provision**: Automatically adds liquidity when the contract reaches a threshold balance.
@@ -72,6 +72,7 @@
 - **`balanceOf(address account)`**  
   Returns the token balance of a specific account.
 
+
 ### Transactions
 - **`transfer(address to, uint256 amount)`**  
   Transfers tokens to the specified address.
@@ -94,6 +95,10 @@
 
 - **`setNumberOfBlocksForBlacklist(uint256 numBlocks)`**  
   Sets the number of blocks after launch for blacklist management.
+  
+    # numBlocksForBlacklist(curenntly set 5 block after you can change)
+    - numBlocksForBlacklist sets the number of blocks during which anyone who interacts with the contract will be blacklisted. Specifically, after the liquidity pool (Uniswap pair) is created, the contract starts counting blocks from the       current block number (currentBlockNumber). If a recipient interacts with the contract within the first numBlocksForBlacklist blocks, they are automatically blacklisted, meaning they cannot trade or transfer the token anymore.
+    - Purpose: This is typically used as an anti-bot mechanism to prevent sniper bots or malicious actors from taking advantage of the token launch by buying tokens in the first few blocks after trading is enabled. By setting a block           limit, the contract can automatically blacklist such addresses, preventing them from making further trades.
 
 - **`setMaxAmount(uint256 amount)`**  
   Sets the maximum transaction amount for buy/sell transactions.
