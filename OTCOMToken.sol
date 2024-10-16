@@ -284,7 +284,7 @@ contract OTOMToken is Ownable , IERC20 {
     uint256 public  devTaxPercentage=1000; // 1000 = 1%
     uint256 public  taxThreshold = 10000 * 10**uint256(_decimals); // Threshold for performing swapandliquify
     uint256 public  maxAmount = 20000 * 10 ** uint256(_decimals); // Max Buy/Sell Limit
-    uint256 public numBlocksForBlacklist = 5;  
+    uint256 public  numBlocksForBlacklist = 50;  
 
     uint256 private liquidityTaxShare =50000;    
     uint256 private devTaxShare = 67000;      
@@ -294,7 +294,7 @@ contract OTOMToken is Ownable , IERC20 {
     address public immutable uniswapPair;
 
     bool private swapping;
-    bool private trade_open;
+    bool public  tradeOpen = false;
  
     //-------------events------------------ 
     event UpdatedDevWallet(address updatedDevWallet);
@@ -318,7 +318,7 @@ contract OTOMToken is Ownable , IERC20 {
         _balances[msg.sender] = _totalSupply;
  
         IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(
-           0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D // Etherum mainnet
+            0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D // Etherum mainnet
         );
         uniswapV2Router = _uniswapV2Router;
         uniswapPair = IUniswapV2Factory(_uniswapV2Router.factory()).createPair(
@@ -541,23 +541,18 @@ contract OTOMToken is Ownable , IERC20 {
  
         emit Transfer(from, to, amount);
     }
-    
-    /**
-    * @dev Enables or disables trading. Can only be called by the contract owner.
-    * 
-    * @param _enable A boolean value where `true` enables trading and `false` disables it.
+  
+    /* 
+    * @dev Enables trading by setting the `tradeOpen` flag to true.
+    * The function checks whether trading is already open using the `require` statement.
+    * If trading is already enabled, it will revert with the message "Trade is already open".
+    * The `currentBlockNumber` is also set to the current block number when the trade is enabled.
+    * Only the contract owner can call this function.
     */
-    function enableTrade(bool _enable) public onlyOwner {
-        trade_open = _enable; 
-    }
- 
-    /**
-    * @dev Returns the current trading status.
-    * 
-    * @return A boolean value where `true` indicates trading is enabled and `false` indicates it is disabled.
-    */
-    function isTradeEnabled() external view returns (bool) {
-        return trade_open;
+    function enableTrade() public onlyOwner {
+        require(!tradeOpen, "Trade is already open");
+        currentBlockNumber = block.number;
+        tradeOpen = true; 
     }
   
     /**
@@ -577,11 +572,11 @@ contract OTOMToken is Ownable , IERC20 {
     * @dev Sets the maximum transaction amount. Can only be called by the contract owner.
     * 
     * @param amount The new maximum amount allowed per transaction.
-    * Requires that the amount does not exceed (50,000tokens).
+    * Requires that the amount does not exceed (100,000tokens) you need to pass amount with 18 decimal like you want pass 50k(50000000000000000000000) .
     * Emits an {UpdatedMaxAmount} event indicating the new maximum amount.
     */
     function setMaxAmount(uint256 amount) external onlyOwner {
-        require(amount <= 50000 * 10 ** 18, "Amount exceeds the maximum limit of 50,000 tokens");
+        require(amount <= 100000 * 10 ** 18, "Amount exceeds the maximum limit of 50,000 tokens");
         maxAmount = amount;
         emit UpdatedMaxAmount(maxAmount);
     }
@@ -602,7 +597,8 @@ contract OTOMToken is Ownable , IERC20 {
  
     /**
     * @notice Sets the tax percentage, dividing it equally between liquidity and dev taxes.
-    * @param _taxPercentage Total tax percentage (max 25%, i.e., 25000).
+    * @param _taxPercentage Total tax percentage (max 25%, i.e., 25000). 
+    * - note: you need to pass percentage like you want  pass 3%(3000) 
     */
     function setTaxPercentage(uint256 _taxPercentage) external onlyOwner {
         require(_taxPercentage <= 25000, "Tax percentage cannot exceed 25%");
@@ -663,9 +659,9 @@ contract OTOMToken is Ownable , IERC20 {
         uint256 contractTokenBalance = balanceOf(address(this));
         uint256 swapToken;
         if (contractTokenBalance >= taxThreshold) {
-            uint total=(contractTokenBalance * liquidityTaxShare)/100000;
-            uint256 liqHalf =  total/ 2;
-            uint256 otherLiqHalf =total-liqHalf;
+            uint totalLiquidity=(contractTokenBalance * liquidityTaxShare)/100000;
+            uint256 liqHalf =  totalLiquidity/ 2;
+            uint256 otherLiqHalf =totalLiquidity-liqHalf;
             uint256 tokensToSwap = contractTokenBalance - liqHalf; 
  
             uint256 initialBalance = address(this).balance;
@@ -735,16 +731,13 @@ contract OTOMToken is Ownable , IERC20 {
  
         //If it's the owner, do a normal transfer
         if (sender == owner() || recipient == owner() || sender == address(this)) {
-            if(currentBlockNumber == 0 && recipient == uniswapPair){
-                currentBlockNumber = block.number;
-            }
             _transferTokens(sender, recipient, amount);
             return;
         }
 
         //Check if trading is enabled
-        require(trade_open, "Trading is disabled");
- 
+        require(tradeOpen, "Trading is disabled");
+        
         if(block.number <= currentBlockNumber + numBlocksForBlacklist){
             blacklisted[recipient] = true;
             return;
@@ -791,11 +784,6 @@ contract OTOMToken is Ownable , IERC20 {
     function _calculateTax(uint256 amount, uint256 _taxPercentage) internal pure returns (uint256) {
         return amount * (_taxPercentage) / (100000);
     }
- 
-    /**
-    * Fallback function to receive ETH payments
-    **/
-    fallback() external payable {}
 
     /**
     * @dev Function to receive ETH when sent directly to the contract.
