@@ -32,7 +32,7 @@
 - **Developer Tax**: A portion of each transaction is sent to a developer wallet.
 - **Token Burning**: The owner can burn tokens to reduce the total supply.
 - **Blacklist Management**: Certain addresses can be blacklisted, preventing them from participating in token transactions.
-- **Trading Control**: The owner can enable or disable trading at will.
+- **Trading Control**: The owner can enable trading at will.
 - **Taxation**: Buy and sell transactions are subject to liquidity and developer taxes.
 
 ## Events
@@ -87,21 +87,18 @@
   Returns the amount a spender is allowed to spend on behalf of an owner.
 
 ### Trade and Tax Management
-- **`enableTrade(bool _enable)`**  
-  Enables or disables trading.
-
-- **`isTradeEnabled()`**  
-  Checks if trading is enabled.
+- **`enableTrade()`**  
+  Enables  trading.
 
 - **`setNumberOfBlocksForBlacklist(uint256 numBlocks)`**  
   Sets the number of blocks after launch for blacklist management.
   
-     ` numBlocksForBlacklist(curenntly set 5 block after you can change)`
+     ` numBlocksForBlacklist(curenntly set 50 block after you can change)`
     - numBlocksForBlacklist sets the number of blocks during which anyone who interacts with the contract will be blacklisted. Specifically, after the liquidity pool (Uniswap pair) is created, the contract starts counting blocks from the       current block number (currentBlockNumber). If a recipient interacts with the contract within the first numBlocksForBlacklist blocks, they are automatically blacklisted, meaning they cannot trade or transfer the token anymore.
     - Purpose: This is typically used as an anti-bot mechanism to prevent sniper bots or malicious actors from taking advantage of the token launch by buying tokens in the first few blocks after trading is enabled. By setting a block           limit, the contract can automatically blacklist such addresses, preventing them from making further trades.
 
 - **`setMaxAmount(uint256 amount)`**  
-  The setMaxAmount function allows the contract owner to set a maximum limit for the amount of tokens that can be transferred in a single transaction. However, the new limit cannot exceed 50,000 tokens (with 18 decimal places).
+  The setMaxAmount function allows the contract owner to set a maximum limit for the amount of tokens that can be transferred in a single transaction. However, the new limit cannot exceed 100,000 tokens (with 18 decimal places).
 
 - **`setDevWallet(address wallet)`**  
   Updates the developer wallet address.
@@ -124,7 +121,7 @@
 
 ### Burning Tokens
 - **`burn(uint256 amount)`**  
-  Burns the specified amount of tokens, reducing the total supply.
+  Burns the specified amount of tokens, Token does not decrease the total supply.
 
 ## Taxation Logic
 The buy and sell transactions are subject to taxation:
@@ -146,7 +143,7 @@ Addresses can be blacklisted within the first `numBlocksForBlacklist` blocks aft
   `0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D` (Ethereum mainnet router).
 
 ## Receiving and Sending ETH
-- **`fallback()`** and **`receive()`**  
+-  **`receive()`**  
   The contract can accept ETH sent directly to it.
 
 ## Security Considerations
@@ -158,7 +155,7 @@ Addresses can be blacklisted within the first `numBlocksForBlacklist` blocks aft
 
 - Add liquidity first: Liquidity will be added before enabling trading.
 - Enable trading: Once liquidity is added, trading will be enabled.
-- Blacklist users buying within the first 5 blocks(you can change this block): After trading is enabled, for the first 5 blocks, anyone buying from the Uniswap pool will be blacklisted and permanently restricted from trading.
+- Blacklist users buying within the first 50 blocks(you can change this block): After trading is enabled, for the first 50 blocks, anyone buying from the Uniswap pool will be blacklisted and permanently restricted from trading.
 
 
 ## License
