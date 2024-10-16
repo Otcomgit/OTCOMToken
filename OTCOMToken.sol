@@ -576,7 +576,7 @@ contract OTOMToken is Ownable , IERC20 {
     * Emits an {UpdatedMaxAmount} event indicating the new maximum amount.
     */
     function setMaxAmount(uint256 amount) external onlyOwner {
-        require(amount <= 100000 * 10 ** 18, "Amount exceeds the maximum limit of 50,000 tokens");
+        require(amount <= 100000 * 10 ** 18, "Amount exceeds the maximum limit of 100,000 tokens");
         maxAmount = amount;
         emit UpdatedMaxAmount(maxAmount);
     }
